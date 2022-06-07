@@ -1,5 +1,7 @@
 package com.ssolpark.security.security;
 
+import com.ssolpark.security.common.ApiResponse;
+import com.ssolpark.security.common.ApiResponseType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -19,6 +21,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         log.error("Responding with unauthorized error. Message - {}", e.getMessage());
 
-        // todo https://spring.io/blog/2022/02/21/spring-security-without-the-websecurityconfigureradapter
+        ApiResponse.error(response, ApiResponseType.UNAUTHORIZED_RESPONSE);
     }
 }
