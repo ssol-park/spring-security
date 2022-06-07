@@ -1,14 +1,13 @@
 package com.ssolpark.security.model;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.Date;
 
 @Getter
-@Setter
 @NoArgsConstructor
 @Entity
 @Table
@@ -26,4 +25,11 @@ public class Member {
 
     private Date createdOn;
 
+    @Builder
+    public Member(String name, String password, String email) {
+        this.name = name;
+        this.password = password;
+        this.email = email;
+        this.createdOn = new Date();
+    }
 }
