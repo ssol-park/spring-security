@@ -5,10 +5,10 @@ import lombok.Getter;
 @Getter
 public class DataApiResponse<T> extends ApiResponse{
 
-    private T result;
+    private T data;
 
-    public DataApiResponse(T result) {
+    public DataApiResponse(T data) {
         super(ApiResponseType.SUCCESS.getCode(), ApiResponseType.SUCCESS.getMessage());
-        this.result = result;
+        this.data = data;
     }
 }

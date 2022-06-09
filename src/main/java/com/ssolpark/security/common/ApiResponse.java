@@ -19,9 +19,12 @@ public class ApiResponse {
 
     private String msg = ApiResponseType.SUCCESS.getMessage();
 
+    private Boolean isSuccess = true;
+
     public ApiResponse(int code, String msg) {
         this.code = code;
         this.msg = msg;
+        this.isSuccess = code == 200 ? true : false;
     }
 
     public static ApiResponse error(ApiResponseType apiResponseType) {
@@ -52,17 +55,6 @@ public class ApiResponse {
         servletResponse.setCharacterEncoding("UTF-8");
         servletResponse.setStatus(apiResponseType.getCode());
         servletResponse.getWriter().write(Objects.requireNonNull(objectMapper.writeValueAsString(ApiResponse.error(apiResponseType))));
-    }
-
-    public static void token(ServletResponse response, String token) throws IOException {
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        HttpServletResponse servletResponse = (HttpServletResponse) response;
-        servletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        servletResponse.setCharacterEncoding("UTF-8");
-        servletResponse.setStatus(ApiResponseType.SUCCESS.getCode());
-        servletResponse.getWriter().write(Objects.requireNonNull(objectMapper.writeValueAsString(new DataApiResponse<String>(token))));
     }
 
     @Getter
