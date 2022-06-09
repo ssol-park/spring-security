@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class MemberJoinDto {
+public class RegMemberDto {
 
     private String email;
 
@@ -13,9 +13,10 @@ public class MemberJoinDto {
 
     private String name;
 
-    public MemberJoinDto(String email, String password, String name) {
+    public RegMemberDto(String email, String password, String name) {
         this.email = email;
         this.password = password;
         this.name = name;
     }
+
 }
