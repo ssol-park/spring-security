@@ -1,99 +1,71 @@
 package com.ssolpark.security.config;
 
 import com.ssolpark.security.security.AuthenticationFilter;
-import com.ssolpark.security.security.JwtFilter;
-import com.ssolpark.security.security.JwtProvider;
+import com.ssolpark.security.security.AuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-    // JWT 제공
-    private final JwtProvider jwtProvider;
+    final String[] AUTH_WHITELIST = new String[] {
+            "/auth/registrations",
+            "/auth"
+    };
 
-    // 인증 실패 or 인증헤더를 전달 받지 못했을 때
-    private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final AuthenticationProvider authenticationProvider;
 
-    // 인증 성공
-    private final AuthenticationSuccessHandler authenticationSuccessHandler;
-
-    // 인증 실패
-    private final AuthenticationFailureHandler authenticationFailureHandler;
-
-    // 인가 실패
-    private final AccessDeniedHandler accessDeniedHandler;
-
-    public SecurityConfiguration(JwtProvider jwtProvider, AuthenticationEntryPoint authenticationEntryPoint
-            , AuthenticationSuccessHandler authenticationSuccessHandler, AuthenticationFailureHandler authenticationFailureHandler
-            , AccessDeniedHandler accessDeniedHandler) {
-        this.jwtProvider = jwtProvider;
-        this.authenticationEntryPoint = authenticationEntryPoint;
-        this.authenticationSuccessHandler = authenticationSuccessHandler;
-        this.authenticationFailureHandler = authenticationFailureHandler;
-        this.accessDeniedHandler = accessDeniedHandler;
+    public SecurityConfiguration(AuthenticationProvider authenticationProvider) {
+        super();
+        this.authenticationProvider = authenticationProvider;
     }
 
-    /*
-    *  보안 기능 초기화 및 설정
-    * */
     @Override
-    protected void configure(HttpSecurity http) throws Exception {
-
-        final String[] POST_WHITELIST = new String[] {
-                "/auth/registrations",
-                "/auth"
-        };
-
-        http.csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().exceptionHandling()
-                .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler)
-                .and().authorizeRequests()
-                .antMatchers(POST_WHITELIST).permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .formLogin().disable()
-                .addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(authenticationProvider);
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    AuthenticationFilter authenticationFilter() throws Exception {
 
-    @Bean
-    public AuthenticationFilter authenticationFilter() throws Exception {
+        RequestMatcher requestMatcher =
+                new NegatedRequestMatcher(new OrRequestMatcher(Arrays.stream(AUTH_WHITELIST).map(AntPathRequestMatcher::new).collect(Collectors.toList())));
 
-        AuthenticationFilter authenticationFilter = new AuthenticationFilter(authenticationManager());
+        AuthenticationFilter authenticationFilter = new AuthenticationFilter(requestMatcher);
 
-        authenticationFilter.setFilterProcessesUrl("/auth");
-
-        authenticationFilter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
-
-        authenticationFilter.setAuthenticationFailureHandler(authenticationFailureHandler);
-
-        authenticationFilter.afterPropertiesSet();
+        authenticationFilter.setAuthenticationManager(authenticationManager());
 
         return authenticationFilter;
     }
 
-    @Bean
-    public JwtFilter jwtFilter() {
-        return new JwtFilter(jwtProvider);
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .csrf().disable()
+                .httpBasic().disable()
+                .authenticationProvider(authenticationProvider)
+                .addFilterAfter(authenticationFilter(), AnonymousAuthenticationFilter.class)
+                .authorizeRequests()
+                .antMatchers(AUTH_WHITELIST).permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+        http
+                .headers().frameOptions().disable();
     }
 }
