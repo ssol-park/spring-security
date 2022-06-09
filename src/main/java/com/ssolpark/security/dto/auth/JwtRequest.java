@@ -8,15 +8,18 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AuthenticationDto {
+public class JwtRequest {
 
     private String email;
 
     private String password;
 
+    private String refreshToken;
+
     @Builder
-    public AuthenticationDto(String email, String password) {
+    public JwtRequest(String email, String password, String refreshToken) {
         this.email = email;
         this.password = password;
+        this.refreshToken = refreshToken;
     }
 }
