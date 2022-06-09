@@ -1,8 +1,10 @@
 package com.ssolpark.security.service;
 
-import com.ssolpark.security.common.ApiResponse;
-import com.ssolpark.security.dto.MemberJoinDto;
+import com.ssolpark.security.security.UserDetailsImpl;
+
+import java.util.Optional;
 
 public interface MemberService {
-    ApiResponse registration(MemberJoinDto memberJoinDto);
+
+    Optional<UserDetailsImpl> getMemberByEmail(String email);
 }
