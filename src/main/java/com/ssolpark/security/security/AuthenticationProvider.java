@@ -44,10 +44,7 @@ public class AuthenticationProvider extends AbstractUserDetailsAuthenticationPro
             throw new UsernameNotFoundException("TOKEN DOES NOT CONTAIN EMAIL");
         }
 
-        // todo 중복호출
-        log.info("--- aa");
         UserDetails userDetails = memberService.getMemberByEmail(email).orElseThrow(() -> new UsernameNotFoundException("USER NOT FOUND WITH EMAIL"));
-        log.info("--- bb");
 
         return userDetails;
     }
