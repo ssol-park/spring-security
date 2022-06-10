@@ -1,7 +1,6 @@
 package com.ssolpark.security.config;
 
-import com.ssolpark.security.security.AuthenticationFilter;
-import com.ssolpark.security.security.AuthenticationProvider;
+import com.ssolpark.security.security.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -46,6 +45,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 new NegatedRequestMatcher(new OrRequestMatcher(Arrays.stream(AUTH_WHITELIST).map(AntPathRequestMatcher::new).collect(Collectors.toList())));
 
         AuthenticationFilter authenticationFilter = new AuthenticationFilter(requestMatcher);
+
+        authenticationFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());
 
         authenticationFilter.setAuthenticationManager(authenticationManager());
 
