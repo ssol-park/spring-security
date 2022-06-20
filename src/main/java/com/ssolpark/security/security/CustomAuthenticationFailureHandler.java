@@ -11,7 +11,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,16 +25,9 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Map<String, Object> error = new HashMap<>();
-        error.put("domain", "global");
-        error.put("reason", "required");
-        error.put("message", "Invalid credentials.");
-        ArrayList<Map<String, Object>> errorsList = new ArrayList<>();
-        errorsList.add(error);
         Map<String, Object> errors = new HashMap<>();
-        errors.put("errors", errorsList);
-        errors.put("code", 401);
-        errors.put("message", "Invalid credentials.");
+        errors.put("code", HttpStatus.UNAUTHORIZED.value());
+        errors.put("message", exception.getMessage());
 
         Map<String, Object> data = new HashMap<>();
         data.put(
