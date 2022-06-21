@@ -41,7 +41,6 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
 
         }
 
-        // todo exception handling
         throw  new AuthenticationCredentialsNotFoundException("LOGIN TOKEN NOT FOUND");
     }
 
