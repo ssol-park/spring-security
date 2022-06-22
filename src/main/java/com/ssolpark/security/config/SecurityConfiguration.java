@@ -1,7 +1,6 @@
 package com.ssolpark.security.config;
 
 import com.ssolpark.security.security.*;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,8 +21,8 @@ import java.util.stream.Collectors;
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     final String[] AUTH_WHITELIST = new String[] {
-            "/auth/registrations",
-            "/auth"
+            "/auth",
+            "/registrations"
     };
 
     private final AuthenticationProvider authenticationProvider;
@@ -38,7 +37,6 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         auth.authenticationProvider(authenticationProvider);
     }
 
-    @Bean
     AuthenticationFilter authenticationFilter() throws Exception {
 
         RequestMatcher requestMatcher =
