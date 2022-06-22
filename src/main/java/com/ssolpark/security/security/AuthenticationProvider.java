@@ -2,14 +2,12 @@ package com.ssolpark.security.security;
 
 import com.ssolpark.security.service.MemberService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.AbstractUserDetailsAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Component
 @Slf4j
@@ -26,26 +24,16 @@ public class AuthenticationProvider extends AbstractUserDetailsAuthenticationPro
 
     @Override
     protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException {
-
     }
 
     @Override
     protected UserDetails retrieveUser(String username, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException {
 
-        String jwtToken = authentication.getCredentials().toString();
-
-        if (jwtProvider.isTokenExpired(jwtToken)) {
-            throw new AccountExpiredException("TOKEN IS EXPIRED");
-        }
-
-        String email = jwtProvider.getSubjectFromToken(jwtToken);
-
-        if (!StringUtils.hasText(email)) {
-            throw new UsernameNotFoundException("TOKEN DOES NOT CONTAIN EMAIL");
-        }
+        String email = jwtProvider.getSubjectFromToken(username);
 
         UserDetails userDetails = memberService.getMemberByEmail(email).orElseThrow(() -> new UsernameNotFoundException("USER NOT FOUND WITH EMAIL"));
 
         return userDetails;
+
     }
 }
