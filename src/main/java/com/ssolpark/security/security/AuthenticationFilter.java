@@ -41,7 +41,7 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
 
         }
 
-        throw  new AuthenticationCredentialsNotFoundException("LOGIN TOKEN NOT FOUND");
+        throw new AuthenticationCredentialsNotFoundException("LOGIN TOKEN NOT FOUND");
     }
 
     @Override

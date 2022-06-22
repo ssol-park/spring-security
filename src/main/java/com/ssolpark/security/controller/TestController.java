@@ -13,7 +13,6 @@ public class TestController {
 
     @GetMapping
     public ApiResponse test () {
-        log.info(" ########## TEST ##########");
         return new ApiResponse();
     }
 
