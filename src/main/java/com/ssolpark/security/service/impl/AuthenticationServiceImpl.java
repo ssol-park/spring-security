@@ -1,7 +1,7 @@
 package com.ssolpark.security.service.impl;
 
 import com.ssolpark.security.common.ApiResponse;
-import com.ssolpark.security.common.ApiResponseType;
+import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.dto.auth.JwtRequest;
@@ -51,7 +51,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         Member member = findByEmail(regMemberDto.getEmail());
 
         if(member != null) {
-            return new ApiResponse(ApiResponseType.ALREADY_DATA_RESPONSE.getCode(), ApiResponseType.ALREADY_DATA_RESPONSE.getMessage());
+            return new ApiResponse(ResponseType.REGISTERED_MEMBER.getCode(), ResponseType.REGISTERED_MEMBER.getMessage());
         }
 
         Member saveMember = Member.builder()
@@ -62,13 +62,37 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         memberRepo.save(saveMember);
 
-        return new ApiResponse(ApiResponseType.SUCCESS.getCode(), ApiResponseType.SUCCESS.getMessage());
+        return new ApiResponse(ResponseType.SUCCESS.getCode(), ResponseType.SUCCESS.getMessage());
     }
 
     @Override
     public DataApiResponse authenticateForJwt(JwtRequest jwtRequest) throws Exception {
 
-        Member member = authEmailAndPassword(jwtRequest).orElseThrow(() -> new Exception("WRONG EMAIL OR PASSWORD"));
+        Member member;
+
+        switch (jwtRequest.getGrantType()) {
+            case CLIENT_CREDENTIALS:
+                member = authEmailAndPassword(jwtRequest).orElseThrow(() -> new Exception("WRONG EMAIL OR PASSWORD"));
+                
+                break;
+            case REFRESH_TOKEN:
+                MemberRefreshToken refreshToken = memberRefreshTokenRepo.findByRefreshToken(jwtRequest.getRefreshToken())
+                        .orElseThrow(() -> new Exception("REFRESH TOKEN NOT FOUND"));
+
+                if(refreshToken.getExpiredOn().before(new Date())) {
+                    throw new Exception("REFRESH TOKEN EXPIRED");
+                }
+
+                if(refreshToken.getMember() == null) {
+                    throw new Exception("MEMBER NOT EXIST");
+                }
+
+                member = refreshToken.getMember();
+
+                break;
+            default:
+                throw new Exception("GRANT TYPE CAN'T BE NULL");
+        }
 
         JwtResponse jwtResponse = processJwt(member);
 
