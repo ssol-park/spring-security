@@ -18,7 +18,7 @@ public class AuthenticationController {
     }
 
     @PostMapping
-    public DataApiResponse login (@RequestBody JwtRequest jwtRequest) throws Exception {
+    public DataApiResponse login (@RequestBody JwtRequest jwtRequest) {
         return authenticationService.authenticateForJwt(jwtRequest);
     }
 }

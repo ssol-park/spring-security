@@ -6,6 +6,7 @@ import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.dto.auth.JwtRequest;
 import com.ssolpark.security.dto.auth.JwtResponse;
+import com.ssolpark.security.exception.BusinessException;
 import com.ssolpark.security.model.Member;
 import com.ssolpark.security.model.MemberRefreshToken;
 import com.ssolpark.security.repository.MemberRefreshTokenRepository;
@@ -66,32 +67,32 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public DataApiResponse authenticateForJwt(JwtRequest jwtRequest) throws Exception {
+    public DataApiResponse authenticateForJwt(JwtRequest jwtRequest) {
 
         Member member;
 
         switch (jwtRequest.getGrantType()) {
             case CLIENT_CREDENTIALS:
-                member = authEmailAndPassword(jwtRequest).orElseThrow(() -> new Exception("WRONG EMAIL OR PASSWORD"));
+                member = authEmailAndPassword(jwtRequest).orElseThrow(() -> new BusinessException(ResponseType.WRONG_EMAIL_OR_PASSWORD));
                 
                 break;
             case REFRESH_TOKEN:
                 MemberRefreshToken refreshToken = memberRefreshTokenRepo.findByRefreshToken(jwtRequest.getRefreshToken())
-                        .orElseThrow(() -> new Exception("REFRESH TOKEN NOT FOUND"));
+                        .orElseThrow(() -> new BusinessException(ResponseType.REFRESH_TOKEN_NOT_FOUND));
 
                 if(refreshToken.getExpiredOn().before(new Date())) {
-                    throw new Exception("REFRESH TOKEN EXPIRED");
+                    throw new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED);
                 }
 
                 if(refreshToken.getMember() == null) {
-                    throw new Exception("MEMBER NOT EXIST");
+                    throw new BusinessException(ResponseType.MEMBER_NOT_FOUND);
                 }
 
                 member = refreshToken.getMember();
 
                 break;
             default:
-                throw new Exception("GRANT TYPE CAN'T BE NULL");
+                throw new BusinessException(ResponseType.GRANT_TYPE_NOT_FOUND);
         }
 
         JwtResponse jwtResponse = processJwt(member);

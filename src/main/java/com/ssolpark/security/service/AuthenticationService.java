@@ -9,5 +9,5 @@ public interface AuthenticationService {
 
     ApiResponse registration(RegMemberDto regMemberDto);
 
-    DataApiResponse authenticateForJwt(JwtRequest authRequest) throws Exception;
+    DataApiResponse authenticateForJwt(JwtRequest authRequest);
 }
