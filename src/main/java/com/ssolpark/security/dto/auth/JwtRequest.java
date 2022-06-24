@@ -1,12 +1,10 @@
 package com.ssolpark.security.dto.auth;
 
-import lombok.Builder;
+import com.ssolpark.security.constant.GrantType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @NoArgsConstructor
 public class JwtRequest {
 
@@ -16,10 +14,6 @@ public class JwtRequest {
 
     private String refreshToken;
 
-    @Builder
-    public JwtRequest(String email, String password, String refreshToken) {
-        this.email = email;
-        this.password = password;
-        this.refreshToken = refreshToken;
-    }
+    private GrantType grantType;
+
 }

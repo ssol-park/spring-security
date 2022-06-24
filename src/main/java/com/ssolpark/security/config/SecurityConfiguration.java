@@ -1,5 +1,6 @@
 package com.ssolpark.security.config;
 
+import com.ssolpark.security.exception.handler.CustomAuthenticationFailureHandler;
 import com.ssolpark.security.security.*;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;

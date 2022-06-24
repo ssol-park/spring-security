@@ -1,9 +1,12 @@
 package com.ssolpark.security.security;
 
+import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.dto.auth.JwtResponse;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import com.ssolpark.security.exception.AuthenticationException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +17,7 @@ import java.util.*;
 import java.util.function.Function;
 
 @Component
+@Slf4j
 public final class JwtProvider {
 
     @Value("${accessToken.duration}")
@@ -34,24 +38,43 @@ public final class JwtProvider {
     }
 
     public <T>T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
+        Claims claims = getAllClaimsFromToken(token);
 
         return claimsResolver.apply(claims);
     }
 
-    public Date getExpirationDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getExpiration);
+    public <T>T getClaimFromToken(Function<Claims, T> claimsResolver, final Claims claims) {
+        return claimsResolver.apply(claims);
     }
 
-    public Boolean isTokenExpired(String token) {
+    public Date getExpirationDateFromToken(String token, Claims claims) {
+        return getClaimFromToken(Claims::getExpiration, claims);
+    }
 
-        final Date expirationDate = getExpirationDateFromToken(token);
+    public Boolean validateToken(String token) {
 
-        if(expirationDate == null) {
-            return false;
+        try {
+
+            Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+
+            final Date expirationDate = getExpirationDateFromToken(token, claims);
+
+            if(expirationDate == null) {
+                return false;
+            }
+
+            return expirationDate.before(new Date());
+
+        }catch (UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+
+            log.error(" ### VALIDATION JWT ERROR : {} ### ", e.getLocalizedMessage());
+            throw new AuthenticationException(ResponseType.UNAUTHORIZED_RESPONSE.name());
+
+        }catch (ExpiredJwtException e) {
+
+            log.error( " ### EXPIRED JWT ERROR : {}  ###", ResponseType.JWT_EXPIRED.getMessage());
+            throw new AuthenticationException(ResponseType.JWT_EXPIRED.name());
         }
-
-        return expirationDate.before(new Date());
     }
 
     public String getSubjectFromToken(String token) {

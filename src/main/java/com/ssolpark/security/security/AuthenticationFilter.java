@@ -8,6 +8,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.util.StringUtils;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -31,14 +32,13 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
 
         final String requestToken = request.getHeader(AUTHORIZATION_HEADER);
 
-        if(requestToken != null && requestToken.startsWith(AUTHORIZATION_TYPE)) {
+        if(StringUtils.hasText(requestToken) && requestToken.startsWith(AUTHORIZATION_TYPE)) {
 
             String jwtToken = requestToken.substring(7);
 
             Authentication requestAuth = new UsernamePasswordAuthenticationToken(jwtToken, jwtToken);
 
             return getAuthenticationManager().authenticate(requestAuth);
-
         }
 
         throw new AuthenticationCredentialsNotFoundException("LOGIN TOKEN NOT FOUND");
