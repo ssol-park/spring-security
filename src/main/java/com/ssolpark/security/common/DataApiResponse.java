@@ -8,7 +8,7 @@ public class DataApiResponse<T> extends ApiResponse{
     private T data;
 
     public DataApiResponse(T data) {
-        super(ApiResponseType.SUCCESS.getCode(), ApiResponseType.SUCCESS.getMessage());
+        super(ResponseType.SUCCESS.getCode(), ResponseType.SUCCESS.getMessage());
         this.data = data;
     }
 }

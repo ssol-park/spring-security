@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ApiResponse {
 
-    private int code = ApiResponseType.SUCCESS.getCode();
+    private int code = ResponseType.SUCCESS.getCode();
 
-    private String msg = ApiResponseType.SUCCESS.getMessage();
+    private String msg = ResponseType.SUCCESS.getMessage();
 
     private Boolean isSuccess = true;
 
@@ -18,9 +18,4 @@ public class ApiResponse {
         this.msg = msg;
         this.isSuccess = code == 200 ? true : false;
     }
-
-    public static ApiResponse error(ApiResponseType apiResponseType) {
-        return new ApiResponse(apiResponseType.getCode(), apiResponseType.getMessage());
-    }
-
 }
