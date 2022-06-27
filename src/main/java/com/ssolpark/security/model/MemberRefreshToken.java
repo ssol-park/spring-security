@@ -3,6 +3,8 @@ package com.ssolpark.security.model;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -27,6 +29,12 @@ public class MemberRefreshToken {
 
     private Date expiredOn;
 
+    @UpdateTimestamp
+    private Date updatedOn;
+
+    @CreationTimestamp
+    private Date createdOn;
+
     @Builder
     public MemberRefreshToken(String refreshToken, Member member, Date expiredOn) {
         this.refreshToken = refreshToken;
@@ -34,4 +42,8 @@ public class MemberRefreshToken {
         this.expiredOn = expiredOn;
     }
 
+    public void updateRefreshTokenAndExpiredOn(String refreshToken, Date expiredOn) {
+        this.refreshToken = refreshToken;
+        this.expiredOn = expiredOn;
+    }
 }
