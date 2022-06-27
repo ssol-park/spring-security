@@ -8,6 +8,7 @@ public enum ResponseType {
 
     SUCCESS(200, HttpStatus.OK,"Success"),
 
+    BAD_REQUEST(400, HttpStatus.BAD_REQUEST, "Bad Request"),
     UNAUTHORIZED_RESPONSE(401, HttpStatus.UNAUTHORIZED, "Unauthorized"),
     FORBIDDEN_RESPONSE(403, HttpStatus.FORBIDDEN,"Forbidden"),
     NOT_FOUND_RESPONSE(404, HttpStatus.NOT_FOUND,"Not Found"),
@@ -21,8 +22,9 @@ public enum ResponseType {
     GRANT_TYPE_NOT_FOUND(603, HttpStatus.BAD_REQUEST, "Grant type can't be null"),
 
     JWT_EXPIRED(10000, HttpStatus.BAD_REQUEST, "JWT has been expired"),
-    REFRESH_TOKEN_NOT_FOUND(10001, HttpStatus.BAD_REQUEST, "Refresh token not found"),
-    REFRESH_TOKEN_EXPIRED(10002, HttpStatus.BAD_REQUEST, "Refresh token has been expired");
+    TOKEN_CANNOT_BE_ISSUED(10001, HttpStatus.BAD_REQUEST, "JWT has not expired"),
+    REFRESH_TOKEN_NOT_FOUND(10002, HttpStatus.BAD_REQUEST, "Refresh token not found"),
+    REFRESH_TOKEN_EXPIRED(10003, HttpStatus.BAD_REQUEST, "Refresh token has been expired");
 
     private final int code;
 

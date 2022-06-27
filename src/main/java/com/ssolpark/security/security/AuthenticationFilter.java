@@ -21,7 +21,7 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
 
-    private static final String AUTHORIZATION_TYPE = "Bearer ";
+    public static final String AUTHORIZATION_TYPE = "Bearer ";
 
     public AuthenticationFilter(RequestMatcher requiresAuthenticationRequestMatcher) {
         super(requiresAuthenticationRequestMatcher);

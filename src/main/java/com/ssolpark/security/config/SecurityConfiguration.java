@@ -23,6 +23,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     final String[] AUTH_WHITELIST = new String[] {
             "/auth",
+            "/auth/issue",
             "/registrations"
     };
 
