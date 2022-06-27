@@ -77,6 +77,31 @@ public final class JwtProvider {
         }
     }
 
+    public Boolean isExpiredToken(String token) {
+
+        try {
+
+            Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+
+            final Date expirationDate = getExpirationDateFromToken(token, claims);
+
+            if(expirationDate == null) {
+                return false;
+            }
+
+            return expirationDate.before(new Date());
+
+        }catch (UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+
+            log.error(" ### VALIDATION JWT ERROR : {} ### ", e.getLocalizedMessage());
+            throw new AuthenticationException(ResponseType.UNAUTHORIZED_RESPONSE.name());
+
+        }catch (ExpiredJwtException e) {
+            return true;
+        }
+
+    }
+
     public String getSubjectFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
