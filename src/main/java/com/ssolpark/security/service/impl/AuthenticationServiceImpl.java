@@ -1,5 +1,7 @@
 package com.ssolpark.security.service.impl;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.ssolpark.security.common.ApiResponse;
 import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.common.DataApiResponse;
@@ -25,6 +27,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +38,18 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService {
+
+    @Value("${kakao.oauth.redirect-url}")
+    private String KAKAO_OAUTH_TOKEN;
+
+    @Value("${kakao.redirect-uri}")
+    private String KAKAO_REDIRECT_URI;
+
+    @Value("${kakao.client-id}")
+    private String KAKAO_CLIENT_ID;
+
+    @Value("${kakao.grant-type}")
+    private String KAKAO_GRANT_TYPE;
 
     @Value("${refreshToken.duration}")
     private long REFRESH_TOKEN_VALID_TIME;
@@ -147,6 +165,72 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         throw new BusinessException(ResponseType.BAD_REQUEST);
     }
 
+    @Override
+    public DataApiResponse getKakaoAccessToken(String code) {
+
+        String accessToken = "", refreshToken = "";
+
+        try {
+            URL url = new URL(KAKAO_OAUTH_TOKEN);
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            /*
+            * setDoOutput() : HttpURLConnection의 출력 스트림을 사용할지의 여부 설정
+            * POST 방식은 스트림 기반의 데이터 전송 방식이기 setDoOutput(true) 설정
+            * */
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
+            StringBuffer sb = new StringBuffer();
+
+            sb.append(KAKAO_GRANT_TYPE);
+            sb.append(String.format("&client_id=%s",KAKAO_CLIENT_ID));
+            sb.append(String.format("&redirect_urdi=%s",KAKAO_REDIRECT_URI));
+            sb.append(String.format("&code=%s",code));
+
+            bw.write(sb.toString());
+            bw.flush();
+
+            int responseCode = conn.getResponseCode();
+
+            if(responseCode == HttpURLConnection.HTTP_OK) {
+
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+                String line = "", result = "";
+
+                while ((line = br.readLine()) != null) {
+                    result += line;
+                }
+
+                JsonElement element = JsonParser.parseString(result);
+
+                accessToken = element.getAsJsonObject().get("access_token").getAsString();
+                refreshToken = element.getAsJsonObject().get("refresh_token").getAsString();
+
+                log.info("::: Kakao login success, AccessToken : {}, RefreshToken : {} :::", accessToken, refreshToken);
+
+                br.close();
+                bw.close();
+
+            } else {
+                // todo 실패시
+                log.info("::: Kakao login response code {} :::", responseCode);
+            }
+
+        } catch (MalformedURLException e) {
+
+            e.printStackTrace();
+        } catch (IOException e) {
+
+            e.printStackTrace();
+        }
+
+        return new DataApiResponse(accessToken);
+    }
+
     private EmailAndRefreshTokenDto validateRefreshToken(ReissueTokenRequest tokenRequest) {
 
         if(!StringUtils.hasText(tokenRequest.getRefreshToken())) {
@@ -155,7 +239,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new BusinessException(ResponseType.BAD_REQUEST);
         }
 
-        // todo
         Member member = memberRepo.findByEmail(tokenRequest.getEmail()).orElseThrow(() -> new BusinessException(ResponseType.MEMBER_NOT_FOUND));
 
         MemberRefreshToken memberRefreshToken = memberRefreshTokenRepo.findById(member.getMemberId()).orElseThrow(() -> new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED));

@@ -13,4 +13,6 @@ public interface AuthenticationService {
     DataApiResponse authenticateForJwt(JwtRequest authRequest);
 
     DataApiResponse reIssueAccessToken(ReissueTokenRequest tokenRequest);
+
+    DataApiResponse getKakaoAccessToken(String code);
 }

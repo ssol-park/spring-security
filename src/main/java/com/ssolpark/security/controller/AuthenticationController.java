@@ -23,6 +23,12 @@ public class AuthenticationController {
         return authenticationService.authenticateForJwt(jwtRequest);
     }
 
+    @GetMapping("/kakao")
+    public DataApiResponse kakaoLogin (@RequestParam String code) {
+
+        return authenticationService.getKakaoAccessToken(code);
+    }
+
     @PostMapping("/issue")
     public DataApiResponse reIssueAccessToken (@RequestBody ReissueTokenRequest tokenRequest) {
         return authenticationService.reIssueAccessToken(tokenRequest);
