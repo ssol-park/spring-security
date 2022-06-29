@@ -22,8 +22,7 @@ import java.util.stream.Collectors;
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     final String[] AUTH_WHITELIST = new String[] {
-            "/auth",
-            "/auth/issue",
+            "/auth/**",
             "/registrations"
     };
 
