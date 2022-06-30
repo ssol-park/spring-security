@@ -168,8 +168,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public DataApiResponse getKakaoAccessToken(String code) {
 
-        String accessToken = "", refreshToken = "";
-
         try {
             URL url = new URL(KAKAO_OAUTH_TOKEN);
 
@@ -187,48 +185,72 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             sb.append(KAKAO_GRANT_TYPE);
             sb.append(String.format("&client_id=%s",KAKAO_CLIENT_ID));
-            sb.append(String.format("&redirect_urdi=%s",KAKAO_REDIRECT_URI));
+            sb.append(String.format("&redirect_uri=%s",KAKAO_REDIRECT_URI));
             sb.append(String.format("&code=%s",code));
 
             bw.write(sb.toString());
             bw.flush();
 
+            BufferedReader br;
+
             int responseCode = conn.getResponseCode();
 
             if(responseCode == HttpURLConnection.HTTP_OK) {
+                br  = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
-                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                JsonElement element = readLine(br);
 
-                String line = "", result = "";
+                JwtResponse res = JwtResponse.builder()
+                        .accessToken(element.getAsJsonObject().get("access_token").getAsString())
+                        .expireDate(null)
+                        .build();
 
-                while ((line = br.readLine()) != null) {
-                    result += line;
-                }
+                res.setRefreshToken(element.getAsJsonObject().get("refresh_token").getAsString());
 
-                JsonElement element = JsonParser.parseString(result);
+                log.info("::: Token issued for Kakao login :::");
 
-                accessToken = element.getAsJsonObject().get("access_token").getAsString();
-                refreshToken = element.getAsJsonObject().get("refresh_token").getAsString();
+                close(br, bw);
 
-                log.info("::: Kakao login success, AccessToken : {}, RefreshToken : {} :::", accessToken, refreshToken);
-
-                br.close();
-                bw.close();
+                return new DataApiResponse(res);
 
             } else {
-                // todo 실패시
-                log.info("::: Kakao login response code {} :::", responseCode);
+                br  = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+
+                JsonElement errorElement = readLine(br);
+
+                log.info("### Failed to issue token. Error : {}, {}  ###"
+                        , errorElement.getAsJsonObject().get("error").getAsString()
+                        ,errorElement.getAsJsonObject().get("error_description").getAsString());
             }
 
+            close(br, bw);
+
         } catch (MalformedURLException e) {
-
             e.printStackTrace();
-        } catch (IOException e) {
 
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return new DataApiResponse(accessToken);
+        throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);
+    }
+
+    private void close(BufferedReader br, BufferedWriter bw) throws IOException {
+        br.close();
+        bw.close();
+        log.info("::: I/O Closed successfully :::");
+    }
+
+    private JsonElement readLine(BufferedReader br) throws IOException{
+
+        String line = "";
+        StringBuffer result = new StringBuffer();
+
+        while ((line = br.readLine()) != null) {
+            result.append(line);
+        }
+
+        return JsonParser.parseString(result.toString());
     }
 
     private EmailAndRefreshTokenDto validateRefreshToken(ReissueTokenRequest tokenRequest) {

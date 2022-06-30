@@ -24,7 +24,9 @@ public enum ResponseType {
     JWT_EXPIRED(10000, HttpStatus.BAD_REQUEST, "JWT has been expired"),
     TOKEN_CANNOT_BE_ISSUED(10001, HttpStatus.BAD_REQUEST, "JWT has not expired"),
     REFRESH_TOKEN_NOT_FOUND(10002, HttpStatus.BAD_REQUEST, "Refresh token not found"),
-    REFRESH_TOKEN_EXPIRED(10003, HttpStatus.BAD_REQUEST, "Refresh token has been expired");
+    REFRESH_TOKEN_EXPIRED(10003, HttpStatus.BAD_REQUEST, "Refresh token has been expired"),
+
+    KAKAO_LOGIN_FAILED(11000, HttpStatus.BAD_REQUEST, "kakao login failed");
 
     private final int code;
 
