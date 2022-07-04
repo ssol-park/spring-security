@@ -19,12 +19,19 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long memberId;
 
+    @Column
     private String name;
 
+    @Column
     private String password;
 
+    @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(unique = true)
+    private Long kakaoId;
+
+    @Column(updatable = false)
     @CreationTimestamp
     private Date updatedOn;
 
