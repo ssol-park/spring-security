@@ -1,12 +1,10 @@
 package com.ssolpark.security.service.impl;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.ssolpark.security.common.ApiResponse;
 import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.constant.GrantType;
 import com.ssolpark.security.dto.RegMemberDto;
+import com.ssolpark.security.dto.SnsUserInfoDto;
 import com.ssolpark.security.dto.auth.ReissueTokenRequest;
 import com.ssolpark.security.dto.auth.JwtRequest;
 import com.ssolpark.security.dto.auth.JwtResponse;
@@ -21,16 +19,19 @@ import com.ssolpark.security.service.AuthenticationService;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +39,10 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService {
+
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+
+    public static final String AUTHORIZATION_TYPE = "Bearer ";
 
     @Value("${kakao.oauth.redirect-url}")
     private String KAKAO_OAUTH_TOKEN;
@@ -71,23 +76,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     @Transactional
-    public ApiResponse registration(RegMemberDto regMemberDto) {
+    public Member registration(RegMemberDto regMemberDto) {
 
         Member member = findByEmail(regMemberDto.getEmail());
 
         if(member != null) {
-            return new ApiResponse(ResponseType.REGISTERED_MEMBER.getCode(), ResponseType.REGISTERED_MEMBER.getMessage());
+            throw new BusinessException(ResponseType.REGISTERED_MEMBER);
         }
+
+        String password = regMemberDto.getKakaoId() != null ? passwordEncoder.encode(regMemberDto.getPassword()) : null;
 
         Member saveMember = Member.builder()
                 .email(regMemberDto.getEmail())
-                .password(passwordEncoder.encode(regMemberDto.getPassword()))
+                .password(password)
                 .name(regMemberDto.getName())
                 .build();
 
         memberRepo.save(saveMember);
 
-        return new ApiResponse(ResponseType.SUCCESS.getCode(), ResponseType.SUCCESS.getMessage());
+        return saveMember;
     }
 
     @Override
@@ -107,7 +114,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return new DataApiResponse(jwtResponse);
     }
 
-    private JwtResponse processJwt(Member member) {
+    @Transactional
+    public JwtResponse processJwt(Member member) {
 
         final String email = member.getEmail();
 
@@ -168,92 +176,112 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public DataApiResponse getKakaoAccessToken(String code) {
 
-        try {
-            URL url = new URL(KAKAO_OAUTH_TOKEN);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", KAKAO_CLIENT_ID);
+        params.add("redirect_uri", KAKAO_REDIRECT_URI);
+        params.add("code", code);
 
-            /*
-            * setDoOutput() : HttpURLConnection의 출력 스트림을 사용할지의 여부 설정
-            * POST 방식은 스트림 기반의 데이터 전송 방식이기 setDoOutput(true) 설정
-            * */
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
+        RestTemplate template = new RestTemplate();
 
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuffer sb = new StringBuffer();
+        HttpEntity<MultiValueMap<String, String>> accessTokenRequest = new HttpEntity<>(params, headers);
 
-            sb.append(KAKAO_GRANT_TYPE);
-            sb.append(String.format("&client_id=%s",KAKAO_CLIENT_ID));
-            sb.append(String.format("&redirect_uri=%s",KAKAO_REDIRECT_URI));
-            sb.append(String.format("&code=%s",code));
+        ResponseEntity<String> response = template.exchange(
+                KAKAO_OAUTH_TOKEN,
+                HttpMethod.POST,
+                accessTokenRequest,
+                String.class
+        );
 
-            bw.write(sb.toString());
-            bw.flush();
+        if(response.getStatusCodeValue() == HttpStatus.OK.value()) {
 
-            BufferedReader br;
+            String tokenJson = response.getBody();
+            String accessToken = null;
 
-            int responseCode = conn.getResponseCode();
+            try {
 
-            if(responseCode == HttpURLConnection.HTTP_OK) {
-                br  = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                JSONParser jsonParser = new JSONParser();
+                JSONObject jsonObject = (JSONObject) jsonParser.parse(tokenJson);
 
-                JsonElement element = readLine(br);
+                accessToken = jsonObject.get("access_token").toString();
 
-                JwtResponse res = JwtResponse.builder()
-                        .accessToken(element.getAsJsonObject().get("access_token").getAsString())
-                        .expireDate(null)
-                        .build();
-
-                res.setRefreshToken(element.getAsJsonObject().get("refresh_token").getAsString());
-
-                log.info("::: Token issued for Kakao login :::");
-
-                close(br, bw);
-
-                return new DataApiResponse(res);
-
-            } else {
-                br  = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-
-                JsonElement errorElement = readLine(br);
-
-                log.info("### Failed to issue token. Error : {}, {}  ###"
-                        , errorElement.getAsJsonObject().get("error").getAsString()
-                        ,errorElement.getAsJsonObject().get("error_description").getAsString());
+            } catch (ParseException e) {
+                log.error(" ### Parse Error : {} ###", e.getMessage());
             }
 
-            close(br, bw);
+            SnsUserInfoDto userInfo = getKakaoUserInfoByToken(accessToken);
 
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            Member member = findByEmailAndKakaoId(userInfo.getEmail(), userInfo.getId());
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            // registration
+            if(member == null) {
+
+                RegMemberDto regMember = RegMemberDto.builder()
+                        .kakaoId(userInfo.getId())
+                        .email(userInfo.getEmail())
+                        .build();
+
+                Member oAuthMember = registration(regMember);
+
+                JwtResponse jwtResponse = processJwt(oAuthMember);
+
+                return new DataApiResponse(jwtResponse);
+            }
+
+            // todo login
+
+
+
         }
 
         throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);
     }
 
-    private void close(BufferedReader br, BufferedWriter bw) throws IOException {
-        br.close();
-        bw.close();
-        log.info("::: I/O Closed successfully :::");
-    }
+    private SnsUserInfoDto getKakaoUserInfoByToken(String accessToken) {
 
-    private JsonElement readLine(BufferedReader br) throws IOException{
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(AUTHORIZATION_HEADER, String.format("%s%s", AUTHORIZATION_TYPE, accessToken));
+        headers.add("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
 
-        String line = "";
-        StringBuffer result = new StringBuffer();
+        RestTemplate template = new RestTemplate();
 
-        while ((line = br.readLine()) != null) {
-            result.append(line);
+        HttpEntity<MultiValueMap<String, String>> userInfoRequest = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = template.exchange(
+        "https://kapi.kakao.com/v2/user/me",
+              HttpMethod.POST,
+              userInfoRequest,
+              String.class
+        );
+
+        if(response.getStatusCodeValue() == HttpStatus.OK.value()) {
+
+            try {
+
+                JSONParser jsonParser = new JSONParser();
+                JSONObject jsonObject = (JSONObject) jsonParser.parse(response.getBody());
+                JSONObject kakaoAccount = (JSONObject) jsonObject.get("kakao_account");
+
+                return SnsUserInfoDto.builder()
+                        .id(Long.parseLong(jsonObject.get("id").toString()))
+                        .email(kakaoAccount.get("email").toString())
+                        .build();
+
+            } catch (ParseException e) {
+                log.error(" ### Parse Error : {} ###", e.getMessage());
+            }
+
         }
 
-        return JsonParser.parseString(result.toString());
+        // todo 타입 보완
+        throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);
     }
 
-    private EmailAndRefreshTokenDto validateRefreshToken(ReissueTokenRequest tokenRequest) {
+    @Transactional
+    public EmailAndRefreshTokenDto validateRefreshToken(ReissueTokenRequest tokenRequest) {
 
         if(!StringUtils.hasText(tokenRequest.getRefreshToken())) {
             log.error(" ### Refresh Token is empty ###");
@@ -289,8 +317,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return Optional.empty();
     }
 
-    private Member findByEmail(String email) {
+    @Transactional
+    public Member findByEmail(String email) {
         return memberRepo.findByEmail(email).orElse(null);
+    }
+
+    @Transactional
+    public Member findByEmailAndKakaoId(String email, long id) {
+        return memberRepo.findByEmailAndKakaoId(email, id).orElse(null);
     }
 
     @Getter

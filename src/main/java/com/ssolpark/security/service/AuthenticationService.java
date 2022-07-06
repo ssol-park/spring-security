@@ -1,14 +1,14 @@
 package com.ssolpark.security.service;
 
-import com.ssolpark.security.common.ApiResponse;
 import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.dto.auth.ReissueTokenRequest;
 import com.ssolpark.security.dto.auth.JwtRequest;
+import com.ssolpark.security.model.Member;
 
 public interface AuthenticationService {
 
-    ApiResponse registration(RegMemberDto regMemberDto);
+    Member registration(RegMemberDto regMemberDto);
 
     DataApiResponse authenticateForJwt(JwtRequest authRequest);
 

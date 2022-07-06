@@ -1,6 +1,7 @@
 package com.ssolpark.security.controller;
 
 import com.ssolpark.security.common.ApiResponse;
+import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.service.AuthenticationService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +21,8 @@ public class RegistrationController {
 
     @PostMapping
     public ApiResponse registrations(@RequestBody RegMemberDto regMemberDto) {
-        return authenticationService.registration(regMemberDto);
+        authenticationService.registration(regMemberDto);
+        return new ApiResponse(ResponseType.SUCCESS.getCode(), ResponseType.SUCCESS.getMessage());
     }
 
 }
