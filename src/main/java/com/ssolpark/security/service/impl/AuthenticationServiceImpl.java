@@ -84,12 +84,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new BusinessException(ResponseType.REGISTERED_MEMBER);
         }
 
-        String password = regMemberDto.getKakaoId() != null ? passwordEncoder.encode(regMemberDto.getPassword()) : null;
+        String password = regMemberDto.getKakaoId() != null ? null : passwordEncoder.encode(regMemberDto.getPassword());
 
         Member saveMember = Member.builder()
                 .email(regMemberDto.getEmail())
                 .password(password)
                 .name(regMemberDto.getName())
+                .kakaoId(regMemberDto.getKakaoId())
                 .build();
 
         memberRepo.save(saveMember);
@@ -123,25 +124,42 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         MemberRefreshToken refToken = memberRefreshTokenRepo.findById(member.getMemberId()).orElse(null);
 
-        if(refToken != null && refToken.getExpiredOn().after(new Date())) {
+        if(refToken != null) {
 
-            log.info("::: Found a valid Refresh Token, Email : {} :::", email);
-            jwtResponse.setRefreshToken(refToken.getRefreshToken());
+            if(refToken.getExpiredOn().after(new Date())) {
+                log.info("::: Found a valid Refresh Token, Email : {} :::", email);
+                jwtResponse.setRefreshToken(refToken.getRefreshToken());
+
+            }else {
+
+                jwtResponse.setRefreshToken(UUID.randomUUID().toString().replace("-","").toLowerCase());
+
+                Date expiredDate = new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
+
+                refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), expiredDate);
+
+                memberRefreshTokenRepo.save(refToken);
+
+                log.info("::: Updated a Refresh Token, ExpiredDate : {}, Email : {} :::", expiredDate, email);
+            }
 
         } else {
-
-            log.info("::: Start creating a New Refresh Token, Email : {} :::", email);
 
             jwtResponse.setRefreshToken(UUID.randomUUID().toString().replace("-","").toLowerCase());
 
             Date expiredDate = new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
 
+            refToken = MemberRefreshToken.builder()
+                    .member(member)
+                    .refreshToken(jwtResponse.getRefreshToken())
+                    .expiredOn(expiredDate)
+                    .build();
+
             refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), expiredDate);
 
             memberRefreshTokenRepo.save(refToken);
 
-            log.info("::: End creating a New Refresh Token, ExpiredDate : {}, Email : {} :::", expiredDate, email);
-
+            log.info("::: Created a Refresh Token, ExpiredDate : {}, Email : {} :::", expiredDate, email);
         }
 
         return jwtResponse;
@@ -231,10 +249,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 return new DataApiResponse(jwtResponse);
             }
 
-            // todo login
+            // login
+            JwtResponse jwtResponse = processJwt(member);
 
-
-
+            return new DataApiResponse(jwtResponse);
         }
 
         throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);

@@ -39,9 +39,10 @@ public class Member {
     private Date createdOn;
 
     @Builder
-    public Member(String name, String password, String email) {
+    public Member(String name, String password, String email, Long kakaoId) {
         this.name = name;
         this.password = password;
         this.email = email;
+        this.kakaoId = kakaoId;
     }
 }
