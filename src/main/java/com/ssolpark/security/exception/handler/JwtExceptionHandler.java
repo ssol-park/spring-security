@@ -13,7 +13,6 @@ public class JwtExceptionHandler {
     @ExceptionHandler(ExpiredJwtException.class)
     protected ResponseEntity<ApiError> handleExpiredJwtException(ExpiredJwtException e) {
         ApiError error = new ApiError(ResponseType.JWT_EXPIRED);
-
         return new ResponseEntity<>(error, error.getStatus());
     }
 

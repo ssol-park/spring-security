@@ -9,10 +9,8 @@ import java.io.IOException;
 
 public class HttpClientLoggingInterceptor implements ClientHttpRequestInterceptor {
 
-    //todo
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-
         ClientHttpResponse response = execution.execute(request, body);
 
         return response;

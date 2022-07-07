@@ -36,8 +36,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 
             ApiError error = new ApiError(responseType);
 
-            response.getOutputStream()
-                    .println(objectMapper.writeValueAsString(error));
+            response.getOutputStream().println(objectMapper.writeValueAsString(error));
 
         }else {
 
@@ -46,9 +45,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 
             ApiError error = new ApiError(ResponseType.UNAUTHORIZED_RESPONSE);
 
-            response.getOutputStream()
-                    .println(objectMapper.writeValueAsString(error));
-
+            response.getOutputStream().println(objectMapper.writeValueAsString(error));
         }
 
     }

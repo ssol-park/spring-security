@@ -25,7 +25,6 @@ public class AuthenticationController {
 
     @GetMapping("/kakao")
     public DataApiResponse kakaoLogin (@RequestParam String code) {
-
         return authenticationService.getKakaoAccessToken(code);
     }
 

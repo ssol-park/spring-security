@@ -44,9 +44,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 new NegatedRequestMatcher(new OrRequestMatcher(Arrays.stream(AUTH_WHITELIST).map(AntPathRequestMatcher::new).collect(Collectors.toList())));
 
         AuthenticationFilter authenticationFilter = new AuthenticationFilter(requestMatcher);
-
         authenticationFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());
-
         authenticationFilter.setAuthenticationManager(authenticationManager());
 
         return authenticationFilter;

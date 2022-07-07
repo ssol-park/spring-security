@@ -3,8 +3,6 @@ package com.ssolpark.security.security;
 import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.repository.MemberRefreshTokenRepository;
 import com.ssolpark.security.service.MemberService;
-import io.jsonwebtoken.ExpiredJwtException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.AbstractUserDetailsAuthenticationProvider;
@@ -14,7 +12,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 @Component
-@Slf4j
 public class AuthenticationProvider extends AbstractUserDetailsAuthenticationProvider {
 
     private final MemberService memberService;
