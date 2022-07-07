@@ -19,7 +19,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<UserDetailsImpl> getMemberByEmail(String email) {
 
         Member member = memberRepository.findByEmail(email).orElse(null);

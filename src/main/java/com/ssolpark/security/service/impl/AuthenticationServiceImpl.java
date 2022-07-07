@@ -53,9 +53,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Value("${kakao.client-id}")
     private String KAKAO_CLIENT_ID;
 
-    @Value("${kakao.grant-type}")
-    private String KAKAO_GRANT_TYPE;
-
     @Value("${refreshToken.duration}")
     private long REFRESH_TOKEN_VALID_TIME;
 
@@ -300,7 +297,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public EmailAndRefreshTokenDto validateRefreshToken(ReissueTokenRequest tokenRequest) {
 
         if(!StringUtils.hasText(tokenRequest.getRefreshToken())) {
@@ -337,12 +334,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return Optional.empty();
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Member findByEmail(String email) {
         return memberRepo.findByEmail(email).orElse(null);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Member findByEmailAndKakaoId(String email, long id) {
         return memberRepo.findByEmailAndKakaoId(email, id).orElse(null);
     }
