@@ -128,41 +128,43 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             if(refToken.getExpiredOn().after(new Date())) {
                 log.info("::: Found a valid Refresh Token, Email : {} :::", email);
-                jwtResponse.setRefreshToken(refToken.getRefreshToken());
 
+                jwtResponse.setRefreshToken(refToken.getRefreshToken());
             }else {
 
-                jwtResponse.setRefreshToken(UUID.randomUUID().toString().replace("-","").toLowerCase());
+                jwtResponse.setRefreshToken(getRefreshToken());
 
-                Date expiredDate = new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
-
-                refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), expiredDate);
+                refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), getExpiredDate());
 
                 memberRefreshTokenRepo.save(refToken);
 
-                log.info("::: Updated a Refresh Token, ExpiredDate : {}, Email : {} :::", expiredDate, email);
+                log.info("::: Updated a Refresh Token, ExpiredDate : {}, Email : {} :::", refToken.getExpiredOn(), email);
             }
 
         } else {
 
-            jwtResponse.setRefreshToken(UUID.randomUUID().toString().replace("-","").toLowerCase());
-
-            Date expiredDate = new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
+            jwtResponse.setRefreshToken(getRefreshToken());
 
             refToken = MemberRefreshToken.builder()
                     .member(member)
                     .refreshToken(jwtResponse.getRefreshToken())
-                    .expiredOn(expiredDate)
+                    .expiredOn(getExpiredDate())
                     .build();
-
-            refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), expiredDate);
 
             memberRefreshTokenRepo.save(refToken);
 
-            log.info("::: Created a Refresh Token, ExpiredDate : {}, Email : {} :::", expiredDate, email);
+            log.info("::: Created a Refresh Token, ExpiredDate : {}, Email : {} :::", refToken.getExpiredOn(), email);
         }
 
         return jwtResponse;
+    }
+
+    private String getRefreshToken() {
+        return UUID.randomUUID().toString().replace("-","").toLowerCase();
+    }
+
+    private Date getExpiredDate() {
+        return new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
     }
 
     @Override
@@ -181,6 +183,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
 
             JwtResponse jwtResponse = jwtProvider.generateToken(emailRfrTokenDto.getEmail());
+
             jwtResponse.setRefreshToken(emailRfrTokenDto.getRefreshToken());
 
             return new DataApiResponse(jwtResponse);
@@ -227,7 +230,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 accessToken = jsonObject.get("access_token").toString();
 
             } catch (ParseException e) {
-                log.error(" ### Parse Error : {} ###", e.getMessage());
+                log.error(" ### Failed to get Kakao access token,  cause :{} ###", e.getMessage());
             }
 
             SnsUserInfoDto userInfo = getKakaoUserInfoByToken(accessToken);
@@ -289,12 +292,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                         .build();
 
             } catch (ParseException e) {
-                log.error(" ### Parse Error : {} ###", e.getMessage());
+                log.error(" ### Failed to get Kakao user info,  cause :{} ###", e.getMessage());
             }
 
         }
 
-        // todo 타입 보완
         throw new BusinessException(ResponseType.KAKAO_LOGIN_FAILED);
     }
 
