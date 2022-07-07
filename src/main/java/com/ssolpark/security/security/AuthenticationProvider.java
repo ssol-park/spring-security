@@ -38,7 +38,7 @@ public class AuthenticationProvider extends AbstractUserDetailsAuthenticationPro
 
         String token = authentication.getCredentials().toString();
 
-        if(!jwtProvider.validateToken(token)) {
+        if(jwtProvider.validateToken(token)) {
             throw new AccountExpiredException(ResponseType.UNAUTHORIZED_RESPONSE.name());
         }
 
