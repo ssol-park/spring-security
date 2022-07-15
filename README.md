@@ -8,4 +8,8 @@
 
 - JWT : https://jwt.io/introduction
 
-- KaKao Login : https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api
+- Redis : https://redis.io/docs/
+
+- PostgreSQL : https://www.postgresql.org/docs/current/
+
+- KaKao Login API: https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api
