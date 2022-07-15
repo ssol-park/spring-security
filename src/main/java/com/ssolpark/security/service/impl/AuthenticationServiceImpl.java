@@ -5,6 +5,7 @@ import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.constant.GrantType;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.dto.SnsUserInfoDto;
+import com.ssolpark.security.dto.auth.RefreshToken;
 import com.ssolpark.security.dto.auth.ReissueTokenRequest;
 import com.ssolpark.security.dto.auth.JwtRequest;
 import com.ssolpark.security.dto.auth.JwtResponse;
@@ -13,6 +14,7 @@ import com.ssolpark.security.model.Member;
 import com.ssolpark.security.model.MemberRefreshToken;
 import com.ssolpark.security.repository.MemberRefreshTokenRepository;
 import com.ssolpark.security.repository.MemberRepository;
+import com.ssolpark.security.repository.RefreshTokenRedisRepository;
 import com.ssolpark.security.security.AuthenticationFilter;
 import com.ssolpark.security.security.JwtProvider;
 import com.ssolpark.security.service.AuthenticationService;
@@ -60,13 +62,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final MemberRefreshTokenRepository memberRefreshTokenRepo;
 
+    private final RefreshTokenRedisRepository refreshTokenRepo;
+
     private final JwtProvider jwtProvider;
 
     private final PasswordEncoder passwordEncoder;
 
-    public AuthenticationServiceImpl(MemberRepository memberRepo, MemberRefreshTokenRepository memberRefreshTokenRepo, JwtProvider jwtProvider, PasswordEncoder passwordEncoder) {
+    public AuthenticationServiceImpl(MemberRepository memberRepo, MemberRefreshTokenRepository memberRefreshTokenRepo, RefreshTokenRedisRepository refreshTokenRepo,
+                                     JwtProvider jwtProvider, PasswordEncoder passwordEncoder) {
         this.memberRepo = memberRepo;
         this.memberRefreshTokenRepo = memberRefreshTokenRepo;
+        this.refreshTokenRepo = refreshTokenRepo;
         this.jwtProvider = jwtProvider;
         this.passwordEncoder = passwordEncoder;
     }
@@ -109,7 +115,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         JwtResponse jwtResponse = processJwt(member);
 
+        saveRefreshToken(member.getEmail(), jwtResponse.getRefreshToken());
+
         return new DataApiResponse(jwtResponse);
+    }
+
+    private RefreshToken saveRefreshToken(String email, String refreshToken) {
+        return refreshTokenRepo.save(RefreshToken.createRefreshToken(email, refreshToken, REFRESH_TOKEN_VALID_TIME));
     }
 
     @Transactional
