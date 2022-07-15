@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     final String[] AUTH_WHITELIST = new String[] {
             "/auth/**",
@@ -28,7 +28,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     private final AuthenticationProvider authenticationProvider;
 
-    public SecurityConfiguration(AuthenticationProvider authenticationProvider) {
+    public SecurityConfig(AuthenticationProvider authenticationProvider) {
         super();
         this.authenticationProvider = authenticationProvider;
     }
