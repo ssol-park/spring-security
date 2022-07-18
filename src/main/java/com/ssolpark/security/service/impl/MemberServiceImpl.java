@@ -1,9 +1,11 @@
 package com.ssolpark.security.service.impl;
 
+import com.ssolpark.security.constant.CacheKey;
 import com.ssolpark.security.model.Member;
 import com.ssolpark.security.repository.MemberRepository;
 import com.ssolpark.security.security.UserDetailsImpl;
 import com.ssolpark.security.service.MemberService;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheKey.USER, key = "#email", unless = "#result == null ")
     public Optional<UserDetailsImpl> getMemberByEmail(String email) {
 
         Member member = memberRepository.findByEmail(email).orElse(null);
