@@ -5,19 +5,17 @@ import com.ssolpark.security.common.DataApiResponse;
 import com.ssolpark.security.constant.GrantType;
 import com.ssolpark.security.dto.RegMemberDto;
 import com.ssolpark.security.dto.SnsUserInfoDto;
-import com.ssolpark.security.dto.auth.RefreshToken;
 import com.ssolpark.security.dto.auth.ReissueTokenRequest;
 import com.ssolpark.security.dto.auth.JwtRequest;
 import com.ssolpark.security.dto.auth.JwtResponse;
 import com.ssolpark.security.exception.BusinessException;
 import com.ssolpark.security.model.Member;
-import com.ssolpark.security.model.MemberRefreshToken;
-import com.ssolpark.security.repository.MemberRefreshTokenRepository;
 import com.ssolpark.security.repository.MemberRepository;
 import com.ssolpark.security.repository.RefreshTokenRedisRepository;
 import com.ssolpark.security.security.AuthenticationFilter;
 import com.ssolpark.security.security.JwtProvider;
 import com.ssolpark.security.service.AuthenticationService;
+import com.ssolpark.security.service.RedisService;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -34,9 +32,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -45,6 +43,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private static final String AUTHORIZATION_HEADER = "Authorization";
 
     public static final String AUTHORIZATION_TYPE = "Bearer ";
+
+    @Value("${refreshToken.duration}")
+    private long REFRESH_TOKEN_VALID_TIME;
 
     @Value("${kakao.oauth.redirect-url}")
     private String KAKAO_OAUTH_TOKEN;
@@ -55,26 +56,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Value("${kakao.client-id}")
     private String KAKAO_CLIENT_ID;
 
-    @Value("${refreshToken.duration}")
-    private long REFRESH_TOKEN_VALID_TIME;
-
     private final MemberRepository memberRepo;
-
-    private final MemberRefreshTokenRepository memberRefreshTokenRepo;
-
-    private final RefreshTokenRedisRepository refreshTokenRepo;
 
     private final JwtProvider jwtProvider;
 
     private final PasswordEncoder passwordEncoder;
 
-    public AuthenticationServiceImpl(MemberRepository memberRepo, MemberRefreshTokenRepository memberRefreshTokenRepo, RefreshTokenRedisRepository refreshTokenRepo,
-                                     JwtProvider jwtProvider, PasswordEncoder passwordEncoder) {
+    private final RedisService redisService;
+
+    public AuthenticationServiceImpl(MemberRepository memberRepo, JwtProvider jwtProvider
+            , PasswordEncoder passwordEncoder, RedisService redisService) {
         this.memberRepo = memberRepo;
-        this.memberRefreshTokenRepo = memberRefreshTokenRepo;
-        this.refreshTokenRepo = refreshTokenRepo;
         this.jwtProvider = jwtProvider;
         this.passwordEncoder = passwordEncoder;
+        this.redisService = redisService;
     }
 
     @Override
@@ -115,13 +110,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         JwtResponse jwtResponse = processJwt(member);
 
-        saveRefreshToken(member.getEmail(), jwtResponse.getRefreshToken());
-
         return new DataApiResponse(jwtResponse);
-    }
-
-    private RefreshToken saveRefreshToken(String email, String refreshToken) {
-        return refreshTokenRepo.save(RefreshToken.createRefreshToken(email, refreshToken, REFRESH_TOKEN_VALID_TIME));
     }
 
     @Transactional
@@ -129,53 +118,35 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         final String email = member.getEmail();
 
-        JwtResponse jwtResponse = jwtProvider.generateToken(email);
+        final String memberId = String.valueOf(member.getMemberId());
 
-        MemberRefreshToken refToken = memberRefreshTokenRepo.findById(member.getMemberId()).orElse(null);
+        JwtResponse jwtResponse = jwtProvider.generateAccessToken(email);
+
+        String refToken = redisService.getValues(memberId);
 
         if(refToken != null) {
 
-            if(refToken.getExpiredOn().after(new Date())) {
-                log.info("::: Found a valid Refresh Token, Email : {} :::", email);
+            if(!jwtProvider.isExpiredRefreshToken(memberId, refToken)) {
+                redisService.setValues(memberId, refToken, Duration.ofMillis(REFRESH_TOKEN_VALID_TIME));
 
-                jwtResponse.setRefreshToken(refToken.getRefreshToken());
-            }else {
-
-                jwtResponse.setRefreshToken(getRefreshToken());
-
-                refToken.updateRefreshTokenAndExpiredOn(jwtResponse.getRefreshToken(), getExpiredDate());
-
-                memberRefreshTokenRepo.save(refToken);
-
-                log.info("::: Updated a Refresh Token, ExpiredDate : {}, Email : {} :::", refToken.getExpiredOn(), email);
+                log.info("::: Updated a Refresh Token, ExpiredDate : {}, Email : {} :::", new Date(REFRESH_TOKEN_VALID_TIME), email);
             }
+
+            jwtResponse.setRefreshToken(refToken);
 
         } else {
 
-            jwtResponse.setRefreshToken(getRefreshToken());
+            String refreshToken = jwtProvider.generateRefreshToken(memberId);
 
-            refToken = MemberRefreshToken.builder()
-                    .member(member)
-                    .refreshToken(jwtResponse.getRefreshToken())
-                    .expiredOn(getExpiredDate())
-                    .build();
+            jwtResponse.setRefreshToken(refreshToken);
 
-            memberRefreshTokenRepo.save(refToken);
-
-            log.info("::: Created a Refresh Token, ExpiredDate : {}, Email : {} :::", refToken.getExpiredOn(), email);
+            log.info("::: Created a Refresh Token, ExpiredDate : {}, Email : {} :::", new Date(REFRESH_TOKEN_VALID_TIME), email);
         }
 
         return jwtResponse;
     }
 
-    private String getRefreshToken() {
-        return UUID.randomUUID().toString().replace("-","").toLowerCase();
-    }
-
-    private Date getExpiredDate() {
-        return new Date(System.currentTimeMillis() + REFRESH_TOKEN_VALID_TIME * 1000);
-    }
-
+    //todo
     @Override
     public DataApiResponse reIssueAccessToken(ReissueTokenRequest tokenRequest) {
 
@@ -191,7 +162,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 throw new BusinessException(ResponseType.TOKEN_CANNOT_BE_ISSUED);
             }
 
-            JwtResponse jwtResponse = jwtProvider.generateToken(emailRfrTokenDto.getEmail());
+            JwtResponse jwtResponse = jwtProvider.generateAccessToken(emailRfrTokenDto.getEmail());
 
             jwtResponse.setRefreshToken(emailRfrTokenDto.getRefreshToken());
 
@@ -320,19 +291,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         Member member = memberRepo.findByEmail(tokenRequest.getEmail()).orElseThrow(() -> new BusinessException(ResponseType.MEMBER_NOT_FOUND));
 
-        MemberRefreshToken memberRefreshToken = memberRefreshTokenRepo.findById(member.getMemberId()).orElseThrow(() -> new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED));
+        String refreshToken = redisService.getValues(String.valueOf(member.getMemberId()));
 
-        if(!memberRefreshToken.getRefreshToken().equals(tokenRequest.getRefreshToken())) {
+        if(refreshToken == null) {
+            new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED);
+        }
+
+        if(!refreshToken.equals(tokenRequest.getRefreshToken())) {
             log.error(" ### Refresh Token does not match ###");
 
             throw new BusinessException(ResponseType.BAD_REQUEST);
         }
 
-        if(memberRefreshToken.getExpiredOn().before(new Date())) {
-            throw new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED);
-        }
-
-        return EmailAndRefreshTokenDto.builder().email(member.getEmail()).refreshToken(memberRefreshToken.getRefreshToken()).build();
+        return EmailAndRefreshTokenDto.builder().email(member.getEmail()).refreshToken(refreshToken).build();
     }
 
     private Optional<Member> authEmailAndPassword(JwtRequest jwtRequest) {

@@ -3,6 +3,7 @@ package com.ssolpark.security.security;
 import com.ssolpark.security.common.ResponseType;
 import com.ssolpark.security.dto.auth.JwtResponse;
 import com.ssolpark.security.exception.AuthenticationException;
+import com.ssolpark.security.service.RedisService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 
@@ -23,10 +25,19 @@ public final class JwtProvider {
     @Value("${accessToken.duration}")
     private long ACCESS_TOKEN_VALID_TIME;
 
+    @Value("${refreshToken.duration}")
+    private long REFRESH_TOKEN_VALID_TIME;
+
     @Value("${jwt.secret-key}")
     private String secretCode;
 
     private Key secretKey;
+
+    private final RedisService redisService;
+
+    public JwtProvider(RedisService redisService) {
+        this.redisService = redisService;
+    }
 
     @PostConstruct
     private void init() {
@@ -106,7 +117,7 @@ public final class JwtProvider {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
-    public JwtResponse generateToken(String email) {
+    public JwtResponse generateAccessToken(String email) {
 
         Map<String, Object> claims = new HashMap<>();
 
@@ -119,5 +130,25 @@ public final class JwtProvider {
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationDuration * 1000)).signWith(secretKey)
                 .compact();
+    }
+
+    public String generateRefreshToken(String memberId) {
+
+        final String refreshToken = getRefreshToken();
+
+        redisService.setValues(memberId, refreshToken, Duration.ofMillis(REFRESH_TOKEN_VALID_TIME));
+
+        return refreshToken;
+    }
+
+    public Boolean isExpiredRefreshToken(String memberId, String refreshToken) {
+
+        String savedRefToken = redisService.getValues(memberId);
+
+        return refreshToken.equals(savedRefToken);
+    }
+
+    private String getRefreshToken() {
+        return UUID.randomUUID().toString().replace("-","").toLowerCase();
     }
 }
