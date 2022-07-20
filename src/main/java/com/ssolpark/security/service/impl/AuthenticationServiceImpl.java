@@ -146,7 +146,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return jwtResponse;
     }
 
-    //todo
+    //todo 리프레시 토큰을 체크해야 할듯?
     @Override
     public DataApiResponse reIssueAccessToken(ReissueTokenRequest tokenRequest) {
 

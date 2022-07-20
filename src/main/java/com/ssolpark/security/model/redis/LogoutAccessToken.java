@@ -1,4 +1,4 @@
-package com.ssolpark.security.dto.auth;
+package com.ssolpark.security.model.redis;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.RedisHash;
 
 import javax.persistence.Id;
 
+// todo
 @Getter
 @RedisHash("logoutAccessToken")
 public class LogoutAccessToken {

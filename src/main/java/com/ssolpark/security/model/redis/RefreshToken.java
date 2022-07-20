@@ -1,4 +1,4 @@
-package com.ssolpark.security.dto.auth;
+package com.ssolpark.security.model.redis;
 
 import lombok.Builder;
 import lombok.Getter;
