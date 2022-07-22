@@ -146,7 +146,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return jwtResponse;
     }
 
-    //todo 리프레시 토큰을 체크해야 할듯?
     @Override
     public DataApiResponse reIssueAccessToken(ReissueTokenRequest tokenRequest) {
 
@@ -294,7 +293,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String refreshToken = redisService.getValues(String.valueOf(member.getMemberId()));
 
         if(refreshToken == null) {
-            new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED);
+            throw new BusinessException(ResponseType.REFRESH_TOKEN_EXPIRED);
         }
 
         if(!refreshToken.equals(tokenRequest.getRefreshToken())) {
