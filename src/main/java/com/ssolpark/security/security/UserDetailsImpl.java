@@ -1,16 +1,20 @@
 package com.ssolpark.security.security;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ssolpark.security.model.Member;
 import lombok.Builder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserDetailsImpl implements UserDetails {
 
-    private final String username;
+    private String username;
 
-    private final String password;
+    private String password;
+
+    public UserDetailsImpl() {}
 
     public UserDetailsImpl(Member member) {
         this.username = member.getEmail();
